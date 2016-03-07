@@ -87,7 +87,7 @@
                                         ;(require 'init-csv)
                                         ;(require 'init-erlang)
 (require 'init-javascript)
-;(require 'init-php)
+                                        ;(require 'init-php)
 (require 'init-org)
 (require 'init-nxml)
 (require 'init-html)
@@ -108,6 +108,8 @@
 ;  (require 'init-clojure)
 ;  (require 'init-clojure-cider))
 (require 'init-common-lisp)
+
+(require 'init-scheme)
 
 (when *spell-check-support-enabled*
   (require 'init-spelling))
