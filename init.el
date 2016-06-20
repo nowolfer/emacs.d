@@ -111,6 +111,8 @@
 
 (require 'init-scheme)
 
+(require 'init-golang)
+
 (when *spell-check-support-enabled*
   (require 'init-spelling))
 
