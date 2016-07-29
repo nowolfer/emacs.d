@@ -48,6 +48,29 @@
       (unless (file-exists-p org-ditaa-jar-path)
         (sanityinc/grab-ditaa url jar-name)))))
 
+;; (defun sanityinc/grab-plantuml (url jar-name)
+;;   "Download URL and extract JAR-NAME as `org-plantuml-jar-path'."
+;;   ;; TODO: handle errors
+;;   (message "Grabbing " jar-name " for org.")
+;;   (let ((zip-temp (make-temp-name "emacs-plantuml")))
+;;     (unwind-protect
+;;         (progn
+;;           (when (executable-find "unzip")
+;;             (url-copy-file url zip-temp)
+;;             (shell-command (concat "unzip -p " (shell-quote-argument zip-temp)
+;;                                    " " (shell-quote-argument jar-name) " > "
+;;                                    (shell-quote-argument org-plantuml-jar-path)))))
+;;       (when (file-exists-p zip-temp)
+;;         (delete-file zip-temp)))))
+
+;; (after-load 'ob-ditaa
+;;   (unless (file-exists-p org-plantuml-jar-path)
+;;     (let ((jar-name "plantuml.jar")
+;;           (url "http://sourceforge.net/projects/plantuml/files/plantuml-jar-gplv2-8046.zip"))
+;;       (setq org-plantuml-jar-path (expand-file-name jar-name (file-name-directory user-init-file)))
+;;       (unless (file-exists-p org-plantuml-jar-path)
+;;         (sanityinc/grab-plantuml url jar-name)))))
+
 
 
 (define-minor-mode prose-mode
@@ -96,7 +119,8 @@ typical word processor."
          "* %? :NOTE:\n%U\n%a\n" :clock-resume t)
         ))
 
-
+;;; Set default notes file
+(setq org-default-notes-file "~/Org/notes/notes.org")
 
 ;;; Refiling
 
@@ -343,6 +367,7 @@ typical word processor."
      (ledger . t)
      (ocaml . nil)
      (octave . t)
+     (plantuml . t)
      (python . t)
      (ruby . t)
      (screen . nil)
