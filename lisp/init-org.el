@@ -135,7 +135,7 @@ typical word processor."
         ))
 
 ;;; Set default notes file
-(setq org-default-notes-file "~/Org/notes/notes.org")
+(setq org-default-notes-file "~/git/org/notes.org")
 
 ;;; Refiling
 
