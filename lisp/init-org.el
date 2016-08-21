@@ -147,7 +147,7 @@ typical word processor."
     (setq org-agenda-files org-user-agenda-files)
   (setq org-agenda-files (quote ("~/git/org"
                                  "~/git/org/me"
-                                 "~/git/org/ronch"))))
+                                 "~/git/org/work"))))
 
 (after-load 'org-agenda
   (add-to-list 'org-agenda-after-show-hook 'org-show-entry))
@@ -412,7 +412,27 @@ typical word processor."
 ;;                 (insert (match-string 0))))))
 
 
-;;; Export setup
+;;; Crypt
+
+;; File
+(require 'epa-file)
+(epa-file-enable)
+(setq epa-file-select-keys nil)
+
+;; Entity
+(require 'org-crypt)
+
+;;Auto encrypt when save
+(org-crypt-use-before-save-magic)
+
+;; Set encrypt tag
+(setq org-crypt-tag-matcher "crypt")
+
+;; Prevent secret tag inherit
+(setq org-tags-exclude-from-inheritance (quote ("crypt")))
+
+;; Set encrypt key
+(setq org-crypt-key nil)
 
 
 
