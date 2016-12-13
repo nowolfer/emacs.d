@@ -115,27 +115,27 @@ typical word processor."
 ;;; Capturing
 
 (global-set-key (kbd "C-c c") 'org-capture)
-(setq org-directory "~/git/org")
-(setq org-default-notes-file "~/git/org/refile.org")
+(setq org-directory "~/org")
+(setq org-default-notes-file "~/org/refile.org")
 (setq org-capture-templates
-      `(("t" "Todo" entry (file "~/git/org/refile.org")  ; "" => org-default-notes-file
+      `(("t" "Todo" entry (file "~/org/refile.org")  ; "" => org-default-notes-file
          "* TODO %?\n%U\n%a\n" :clock-in t :clock-resume t)
-        ("n" "Note" entry (file "~/git/org/refile.org")
+        ("n" "Note" entry (file "~/org/refile.org")
          "* %? :NOTE:\n%U\n%a\n" :clock-in t :clock-resume t)
-        ("j" "Journal" entry (file+datetree "~/git/org/diary.org")
+        ("j" "Journal" entry (file+datetree "~/org/diary.org")
          "* %?\n%U\n" :clock-in t :clock-resume t)
-        ("w" "Org-protocol" entry (file "~/git/org/refile.org")
+        ("w" "Org-protocol" entry (file "~/org/refile.org")
          "* TODO Review %c\n%U\n" :immediate-finish t)
-        ("m" "Meeting" entry (file "~/git/org/refile.org")
+        ("m" "Meeting" entry (file "~/org/refile.org")
          "* MEETING with %? :MEETING:\n%U" :clock-in t :clock-resume t)
-        ("p" "Phone call" entry (file "~/git/org/refile.org")
+        ("p" "Phone call" entry (file "~/org/refile.org")
          "* PHONE %? :PHONE:\n%U" :clock-in t :clock-resume t)
-        ("h" "Habit" entry (file "~/git/org/refile.org")
+        ("h" "Habit" entry (file "~/org/refile.org")
          "* NEXT %?\n%U\n%a\nSCHEDULED: %(format-time-string \"%<<%Y-%m-%d %a .+1d/3d>>\")\n:PROPERTIES:\n:STYLE: habit\n:REPEAT_TO_STATE: NEXT\n:END:\n")
         ))
 
 ;;; Set default notes file
-(setq org-default-notes-file "~/git/org/notes.org")
+(setq org-default-notes-file "~/org/notes.org")
 
 ;;; Refiling
 
@@ -145,9 +145,9 @@ typical word processor."
 (setq org-refile-targets '((nil :maxlevel . 9) (org-agenda-files :maxlevel . 9)))
 (if (boundp 'org-user-agenda-files)
     (setq org-agenda-files org-user-agenda-files)
-  (setq org-agenda-files (quote ("~/git/org"
-                                 "~/git/org/me"
-                                 "~/git/org/work"))))
+  (setq org-agenda-files (quote ("~/org"
+                                 "~/org/me"
+                                 "~/org/work"))))
 
 (after-load 'org-agenda
   (add-to-list 'org-agenda-after-show-hook 'org-show-entry))
