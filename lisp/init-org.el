@@ -114,9 +114,12 @@ typical word processor."
 
 ;;; Capturing
 
+;; I use C-c c to start capture mode
 (global-set-key (kbd "C-c c") 'org-capture)
 (setq org-directory "~/org")
 (setq org-default-notes-file "~/org/refile.org")
+
+;; Capture templates for: TODO tasks, Notes
 (setq org-capture-templates
       `(("t" "Todo" entry (file "~/org/refile.org")  ; "" => org-default-notes-file
          "* TODO %?\n%U\n%a\n" :clock-in t :clock-resume t)
@@ -140,29 +143,8 @@ typical word processor."
 ;;; Refiling
 
 (setq org-refile-use-cache nil)
-
-; Targets include this file and any file contributing to the agenda - up to 5 levels deep
+;; Targets include this file and any file contributing to the agenda - up to 9 levels deep
 (setq org-refile-targets '((nil :maxlevel . 9) (org-agenda-files :maxlevel . 9)))
-(if (boundp 'org-user-agenda-files)
-    (setq org-agenda-files org-user-agenda-files)
-  (setq org-agenda-files (quote ("~/org"
-                                 "~/org/me"
-                                 "~/org/work"))))
-
-(after-load 'org-agenda
-  (add-to-list 'org-agenda-after-show-hook 'org-show-entry))
-
-;; Exclude DONE state tasks from refile targets
-(defun sanityinc/verify-refile-target ()
-  "Exclude todo keywords with a done state from refile targets."
-  (not (member (nth 2 (org-heading-components)) org-done-keywords)))
-(setq org-refile-target-verify-function 'sanityinc/verify-refile-target)
-
-(defun sanityinc/org-refile-anywhere (&optional goto default-buffer rfloc msg)
-  "A version of `org-refile' which suppresses `org-refile-target-verify-function'."
-  (interactive "P")
-  (let ((org-refile-target-verify-function))
-    (org-refile goto default-buffer rfloc msg)))
 
 ;; Targets start with the file name - allows creating level 1 tasks
 ;;(setq org-refile-use-outline-path (quote file))
@@ -176,6 +158,27 @@ typical word processor."
 
 ;; Use IDO for both buffer and file completion and ido-everywhere
 (setq org-completion-use-ido t)
+(setq ido-everywhere t)
+(setq ido-max-directory-size 100000)
+(setq ido-mode (quote both))
+;; Use the current window when visiting files and buffers with ido
+(setq ido-default-file-method 'selected-window)
+(setq ido-default-buffer-method 'selected-window)
+;; Use the current window for indirect buffer display
+(setq org-indirect-buffer-display 'current-window)
+
+;; Exclude DONE state tasks from refile targets
+(defun sanityinc/verify-refile-target ()
+  "Exclude todo keywords with a done state from refile targets."
+  (not (member (nth 2 (org-heading-components)) org-done-keywords)))
+(setq org-refile-target-verify-function 'sanityinc/verify-refile-target)
+
+(defun sanityinc/org-refile-anywhere (&optional goto default-buffer rfloc msg)
+  "A version of `org-refile' which suppresses `org-refile-target-verify-function'."
+  (interactive "P")
+  (let ((org-refile-target-verify-function))
+    (org-refile goto default-buffer rfloc msg)))
+
 
 
 ;;; To-do settings
@@ -211,6 +214,13 @@ typical word processor."
 
 ;;; Agenda views
 
+(if (boundp 'org-user-agenda-files)
+    (setq org-agenda-files org-user-agenda-files)
+  (setq org-agenda-files (quote ("~/org"
+                                 "~/org/me"
+                                 "~/org/work"))))
+(after-load 'org-agenda
+  (add-to-list 'org-agenda-after-show-hook 'org-show-entry))
 
 (setq-default org-agenda-clockreport-parameter-plist '(:link t :maxlevel 3))
 
@@ -304,11 +314,38 @@ typical word processor."
   (and (cond
         ((string= tag "hold")
          t)
-        ((string= tag "farm")
+        ((string= tag "diy")
          t))
        (concat "-" tag)))
 
 (setq org-agenda-auto-exclude-function 'linden/org-auto-exclude-function)
+
+
+;;; Tags
+(setq org-tag-alist (quote ((:startgroup)
+                            ("@errand" . ?e)
+                            ("@office" . ?o)
+                            ("@home" . ?H)
+                            ("@diy" . ?d)
+                            (:endgroup)
+                            ("WAITING" . ?w)
+                            ("HOLD" . ?h)
+                            ("PERSONAL" . ?P)
+                            ("WORK" . ?W)
+                            ("DIY" . ?D)
+                            ("ORG" . ?O)
+                            ("LINDEN" . ?L)
+                            ("crypt" . ?E)
+                            ("NOTE" . ?n)
+                            ("CANCELLED" . ?c)
+                            ("FLAGGED" . ??))))
+
+;; Allow setting single tags without the menu
+(setq org-fast-tag-selection-single-key (quote expert))
+
+;; For tag searches ignore tasks with scheduled and deadline dates
+(setq org-agenda-tags-todo-honor-ignore-options t)
+
 
 
 ;;; Org clock
