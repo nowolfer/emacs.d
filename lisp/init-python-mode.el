@@ -10,11 +10,12 @@
 (require-package 'py-autopep8)
 (require-package 'flycheck)
 (require-package 'elpy)
+(require-package 'ein)        ;; (Emacs ipython notebook)
 (require-package 'pip-requirements)
                                         ;(require-package 'py-autopep8)
 ;;; Elpy activate
 (elpy-enable)
-;;;(elpy-use-ipython)
+(elpy-use-ipython)
 (when (require 'flycheck nil t)
   (setq elpy-modules (delq 'elpy-module-flymake elpy-modules))
   (add-hook 'elpy-mode-hook 'flycheck-mode))

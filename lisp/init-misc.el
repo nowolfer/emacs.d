@@ -15,5 +15,14 @@
 
 (add-auto-mode 'conf-mode "Procfile")
 
+;; Screenshot
+(require-package 'screenshot)
+(setq screenshot-schemes
+      ' (
+         ("local"
+          :dir "~/images/")))
+
+(setq screenshot-default-scheme "local") ; default scheme is "local"
+
 
 (provide 'init-misc)
