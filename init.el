@@ -63,9 +63,11 @@
 (require 'init-flycheck)
 
 (require 'init-recentf)
-(require 'init-ido)
+                                        ;(require 'init-ido)
+(require 'init-ivy)
 (require 'init-hippie-expand)
-(require 'init-auto-complete)
+                                        ;(require 'init-auto-complete)
+(require 'init-company)
 (require 'init-windows)
 (require 'init-sessions)
 (require 'init-fonts)
@@ -125,6 +127,7 @@
 
 
 ;; Extra packages which don't require any configuration
+
 (require-package 'gnuplot)
 (require-package 'lua-mode)
 (require-package 'htmlize)
@@ -151,8 +154,6 @@
 ;;----------------------------------------------------------------------------
 ;; Allow users to provide an optional "init-local" containing personal settings
 ;;----------------------------------------------------------------------------
-(when (file-exists-p (expand-file-name "init-local.el" user-emacs-directory))
-  (error "Please move init-local.el to ~/.emacs.d/lisp"))
 (require 'init-local nil t)
 
 
@@ -160,12 +161,6 @@
 ;; Locales (setting them earlier in this file doesn't work in X)
 ;;----------------------------------------------------------------------------
 (require 'init-locales)
-
-(add-hook 'after-init-hook
-          (lambda ()
-            (message "init completed in %.2fms"
-                     (linden/time-subtract-millis after-init-time before-init-time))))
-
 
 (provide 'init)
 

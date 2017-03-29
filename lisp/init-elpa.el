@@ -12,6 +12,19 @@
 
 
 
+;;; Install into separate package dirs for each Emacs version, to prevent bytecode incompatibility
+(let ((versioned-package-dir
+       (expand-file-name (format "elpa-%s.%s" emacs-major-version emacs-minor-version)
+                         user-emacs-directory)))
+  (when (file-directory-p package-user-dir)
+    (message "Default package locations have changed in this config: renaming old package dir %s to %s."
+             package-user-dir
+             versioned-package-dir)
+    (rename-file package-user-dir versioned-package-dir))
+  (setq package-user-dir versioned-package-dir))
+
+
+
 ;;; Standard package repositories
 
 (when (< emacs-major-version 24)
@@ -25,22 +38,20 @@
 (when (< emacs-major-version 24)
   (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
 
+
+(defconst sanityinc/no-ssl (or (< emacs-major-version 24)
+                               (and (memq system-type '(windows-nt ms-dos))
+                                    (not (gnutls-available-p)))))
+
 ;;; Also use Melpa for most packages
-(add-to-list 'package-archives `("melpa" . ,(if (< emacs-major-version 24)
-                                                "http://melpa.org/packages/"
-                                              "https://melpa.org/packages/")))
+(add-to-list 'package-archives
+             `("melpa" . ,(if sanityinc/no-ssl
+                              "http://melpa.org/packages/"
+                            "https://melpa.org/packages/")))
 
+;; NOTE: In case of MELPA problems, the official mirror URL is
+;; https://www.mirrorservice.org/sites/stable.melpa.org/packages/
 
-
-;; If gpg cannot be found, signature checking will fail, so we
-;; conditionally enable it according to whether gpg is available. We
-;; re-run this check once $PATH has been configured
-(defun sanityinc/package-maybe-enable-signatures ()
-  (setq package-check-signature (when (executable-find "gpg") 'allow-unsigned)))
-
-(sanityinc/package-maybe-enable-signatures)
-(after-load 'init-exec-path
-  (sanityinc/package-maybe-enable-signatures))
 
 
 
@@ -71,7 +82,7 @@ locate PACKAGE."
   (condition-case err
       (require-package package min-version no-refresh)
     (error
-     (message "Couldn't install package `%s': %S" package err)
+     (message "Couldn't install optional package `%s': %S" package err)
      nil)))
 
 
@@ -91,9 +102,10 @@ locate PACKAGE."
 
 (defun sanityinc/set-tabulated-list-column-width (col-name width)
   "Set any column with name COL-NAME to the given WIDTH."
-  (cl-loop for column across tabulated-list-format
-           when (string= col-name (car column))
-           do (setf (elt column 1) width)))
+  (when (> width (length col-name))
+    (cl-loop for column across tabulated-list-format
+             when (string= col-name (car column))
+             do (setf (elt column 1) width))))
 
 (defun sanityinc/maybe-widen-package-menu-columns ()
   "Widen some columns of the package menu table to avoid truncation."
