@@ -4,12 +4,12 @@
 (desktop-save-mode 1)
 
 (defadvice desktop-read (around time-restore activate)
-  (let ((start-time (current-time)))
-    (prog1
-        ad-do-it
-      (message "Desktop restored in %.2fms"
-               (linden/time-subtract-millis (current-time)
-                                            start-time)))))
+    (let ((start-time (current-time)))
+      (prog1
+          ad-do-it
+        (message "Desktop restored in %.2fms"
+                 (linden/time-subtract-millis (current-time)
+                                                 start-time)))))
 
 (defadvice desktop-create-buffer (around time-create activate)
   (let ((start-time (current-time))
@@ -18,7 +18,7 @@
         ad-do-it
       (message "Desktop: %.2fms to restore %s"
                (linden/time-subtract-millis (current-time)
-                                            start-time)
+                                               start-time)
                (when filename
 		 (abbreviate-file-name filename))))))
 
@@ -50,6 +50,7 @@
                 (ido-last-directory-list  . 100)
                 (ido-work-directory-list  . 100)
                 (ido-work-file-list       . 100)
+                (ivy-history              . 100)
                 (magit-read-rev-history   . 50)
                 (minibuffer-history       . 50)
                 (org-clock-history        . 50)
@@ -64,13 +65,6 @@
                 (shell-command-history    . 50)
                 tags-file-name
                 tags-table-list)))
-
-(when (eval-when-compile (and (>= emacs-major-version 24)
-                              (version< emacs-version "24.3.50")
-                              ))
-  (unless (boundp 'desktop-restore-frames)
-    (require-package 'frame-restore)
-    (frame-restore)))
 
 
 (provide 'init-sessions)

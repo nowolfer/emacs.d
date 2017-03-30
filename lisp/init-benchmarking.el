@@ -18,6 +18,10 @@ LOAD-DURATION is the time taken in milliseconds to load FEATURE.")
                        (cons feature time)
                        t))))))
 
+(defun linden/show-init-time ()
+  (message "init completed in %.2fms"
+           (linden/time-subtract-millis after-init-time before-init-time)))
 
+(add-hook 'after-init-hook 'linden/show-init-time)
 
 (provide 'init-benchmarking)
