@@ -29,6 +29,11 @@ This is helpful for writeroom-mode, in particular."
 (add-hook 'visual-fill-column-mode-hook
           'sanityinc/maybe-adjust-visual-fill-column)
 
-
+;;; Chinese & English setup
+(require-package 'chinese-fonts-setup)
+(require 'chinese-fonts-setup)
+(chinese-fonts-setup-enable)
+(setq cfs-profiles
+      '("program" "org-mode" "funny"))
 
 (provide 'init-fonts)

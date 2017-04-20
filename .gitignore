@@ -45,3 +45,6 @@ site-lisp/package/
 /projectile-bookmarks.eld
 /anaconda-mode/
 /.historian
+/games
+/chinese-fonts-setup
+/smex-items
