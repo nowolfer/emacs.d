@@ -30,10 +30,9 @@ This is helpful for writeroom-mode, in particular."
           'sanityinc/maybe-adjust-visual-fill-column)
 
 ;;; Chinese & English setup
-(require-package 'chinese-fonts-setup)
-(require 'chinese-fonts-setup)
-(chinese-fonts-setup-enable)
-(setq cfs-profiles
+(require-package 'cnfonts)
+(cnfonts-enable)
+(setq cnfonts-profiles
       '("program" "org-mode" "funny"))
 
 (provide 'init-fonts)
