@@ -3,8 +3,6 @@
   (add-hook hook 'turn-on-elisp-slime-nav-mode))
 (add-hook 'emacs-lisp-mode-hook (lambda () (setq mode-name "ELisp")))
 
-(require-package 'lively)
-
 (setq-default initial-scratch-message
               (concat ";; Happy hacking, " user-login-name " - Emacs ♥ you!\n\n"))
 
@@ -19,13 +17,13 @@
       (eval-region (min (point) (mark)) (max (point) (mark)))
     (pp-eval-last-sexp prefix)))
 
-(global-set-key (kbd "M-:") 'pp-eval-expression)
+(global-set-key [remap eval-expression] 'pp-eval-expression)
 
 (after-load 'lisp-mode
   (define-key emacs-lisp-mode-map (kbd "C-x C-e") 'sanityinc/eval-last-sexp-or-region))
 
-(require-package 'ipretty)
-(ipretty-mode 1)
+(when (maybe-require-package 'ipretty)
+  (add-hook 'after-init-hook 'ipretty-mode))
 
 
 (defadvice pp-display-expression (after sanityinc/make-read-only (expression out-buffer-name) activate)
@@ -68,9 +66,9 @@
   (interactive)
   (if sanityinc/repl-original-buffer
       (funcall sanityinc/repl-switch-function sanityinc/repl-original-buffer)
-    (error "No original buffer.")))
+    (error "No original buffer")))
 
-(after-load 'lisp-mode
+(after-load 'elisp-mode
   (define-key emacs-lisp-mode-map (kbd "C-c C-z") 'sanityinc/switch-to-ielm))
 (after-load 'ielm
   (define-key ielm-map (kbd "C-c C-z") 'sanityinc/repl-switch-back))
@@ -91,26 +89,18 @@
 ;; Automatic byte compilation
 ;; ----------------------------------------------------------------------------
 (when (maybe-require-package 'auto-compile)
-  (auto-compile-on-save-mode 1)
-  (auto-compile-on-load-mode 1))
+  (add-hook 'after-init-hook 'auto-compile-on-save-mode)
+  (add-hook 'after-init-hook 'auto-compile-on-load-mode))
 
 ;; ----------------------------------------------------------------------------
 ;; Load .el if newer than corresponding .elc
 ;; ----------------------------------------------------------------------------
 (setq load-prefer-newer t)
 
-;; ----------------------------------------------------------------------------
-;; Highlight current sexp
-;; ----------------------------------------------------------------------------
+
 
-(require-package 'hl-sexp)
-
-;; Prevent flickery behaviour due to hl-sexp-mode unhighlighting before each command
-(after-load 'hl-sexp
-  (defadvice hl-sexp-mode (after unflicker (&optional turn-on) activate)
-    (when turn-on
-      (remove-hook 'pre-command-hook #'hl-sexp-unhighlight))))
-
+(require-package 'immortal-scratch)
+(add-hook 'after-init-hook 'immortal-scratch-mode)
 
 
 ;;; Support byte-compilation in a sub-process, as
@@ -132,36 +122,24 @@
 ;; ----------------------------------------------------------------------------
 ;; Enable desired features for all lisp modes
 ;; ----------------------------------------------------------------------------
-(require-package 'rainbow-delimiters)
-(require-package 'redshank)
-(after-load 'redshank
-  (diminish 'redshank-mode))
-
 (defun sanityinc/enable-check-parens-on-save ()
   "Run `check-parens' when the current buffer is saved."
   (add-hook 'after-save-hook #'check-parens nil t))
 
+(defun sanityinc/disable-indent-guide ()
+  (when (bound-and-true-p indent-guide-mode)
+    (indent-guide-mode -1)))
+
 (defvar sanityinc/lispy-modes-hook
-  '(rainbow-delimiters-mode
-    enable-paredit-mode
+  '(enable-paredit-mode
     turn-on-eldoc-mode
-    redshank-mode
+    sanityinc/disable-indent-guide
     sanityinc/enable-check-parens-on-save)
   "Hook run in all Lisp modes.")
 
 
 (when (maybe-require-package 'aggressive-indent)
   (add-to-list 'sanityinc/lispy-modes-hook 'aggressive-indent-mode))
-
-(when (maybe-require-package 'adjust-parens)
-  (defun sanityinc/adjust-parens-setup ()
-    (when (fboundp 'lisp-indent-adjust-parens)
-      (set (make-local-variable 'adjust-parens-fallback-dedent-function) 'ignore)
-      (set (make-local-variable 'adjust-parens-fallback-indent-function) 'ignore)
-      (local-set-key (kbd "<M-left>") 'lisp-dedent-adjust-parens)
-      (local-set-key (kbd "<M-right>") 'lisp-indent-adjust-parens)))
-
-  (add-to-list 'sanityinc/lispy-modes-hook 'sanityinc/adjust-parens-setup))
 
 (defun sanityinc/lisp-setup ()
   "Enable features useful in any Lisp mode."
@@ -192,7 +170,7 @@
     (add-hook 'eval-expression-minibuffer-setup-hook #'eldoc-mode)
   (require-package 'eldoc-eval)
   (require 'eldoc-eval)
-  (eldoc-in-minibuffer-mode 1))
+  (add-hook 'after-init-hook 'eldoc-in-minibuffer-mode))
 
 (add-to-list 'auto-mode-alist '("\\.emacs-project\\'" . emacs-lisp-mode))
 (add-to-list 'auto-mode-alist '("archive-contents\\'" . emacs-lisp-mode))
@@ -249,12 +227,27 @@
 
 
 
-(when (maybe-require-package 'rainbow-mode)
-  (defun sanityinc/enable-rainbow-mode-if-theme ()
-    (when (string-match "\\(color-theme-\\|-theme\\.el\\)" (buffer-name))
-      (rainbow-mode 1)))
+;; Extras for theme editing
 
-  (add-hook 'emacs-lisp-mode-hook 'sanityinc/enable-rainbow-mode-if-theme))
+(defvar sanityinc/theme-mode-hook nil
+  "Hook triggered when editing a theme file.")
+
+(defun sanityinc/run-theme-mode-hooks-if-theme ()
+  "Run `sanityinc/theme-mode-hook' if this appears to a theme."
+  (when (string-match "\\(color-theme-\\|-theme\\.el\\)" (buffer-name))
+    (run-hooks 'sanityinc/theme-mode-hook)))
+
+(add-hook 'emacs-lisp-mode-hook 'sanityinc/run-theme-mode-hooks-if-theme t)
+
+(when (maybe-require-package 'rainbow-mode)
+  (add-hook 'sanityinc/theme-mode-hook 'rainbow-mode)
+  (add-hook 'help-mode-hook 'rainbow-mode))
+
+(when (maybe-require-package 'aggressive-indent)
+  ;; Can be prohibitively slow with very long forms
+  (add-to-list 'sanityinc/theme-mode-hook (lambda () (aggressive-indent-mode -1)) t))
+
+
 
 (when (maybe-require-package 'highlight-quoted)
   (add-hook 'emacs-lisp-mode-hook 'highlight-quoted-mode))
@@ -297,5 +290,7 @@
     (when (fboundp 'aggressive-indent-indent-defun)
       (aggressive-indent-indent-defun))))
 
+
+(maybe-require-package 'cask-mode)
 
 (provide 'init-lisp)

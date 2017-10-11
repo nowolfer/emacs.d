@@ -1,23 +1,17 @@
-;;; Orgmode setup
-;;;
-(when (< emacs-major-version 24)
-  (require-package 'org))
-
-(require-package 'org-fstree)
+(maybe-require-package 'org-fstree)
 (when *is-a-mac*
-  (require-package 'org-mac-link)
-  (autoload 'org-mac-grab-link "org-mac-link" nil t)
-  (require-package 'org-mac-iCal))
+  (maybe-require-package 'grab-mac-link))
+
+(maybe-require-package 'org-cliplink)
 
 (define-key global-map (kbd "C-c l") 'org-store-link)
 (define-key global-map (kbd "C-c a") 'org-agenda)
-(define-key global-map (kbd "C-c b") 'org-iswitchb)
-
-;;; Various preferences
+
+;; Various preferences
 (setq org-log-done t
-      org-completion-use-ido t
       org-edit-timestamp-down-means-later t
       org-archive-mark-done nil
+      org-hide-emphasis-markers t
       org-catch-invisible-edits 'show
       org-export-coding-system 'utf-8
       org-fast-tag-selection-single-key 'expert
@@ -27,8 +21,7 @@
 
 
 ;; Lots of stuff from http://doc.norang.ca/org-mode.html
-
-;;; Ditta stuff
+
 (defun sanityinc/grab-ditaa (url jar-name)
   "Download URL and extract JAR-NAME as `org-ditaa-jar-path'."
   ;; TODO: handle errors
@@ -45,37 +38,26 @@
         (delete-file zip-temp)))))
 
 (after-load 'ob-ditaa
-  (unless (file-exists-p org-ditaa-jar-path)
+  (unless (and (boundp 'org-ditaa-jar-path)
+               (file-exists-p org-ditaa-jar-path))
     (let ((jar-name "ditaa0_9.jar")
           (url "http://jaist.dl.sourceforge.net/project/ditaa/ditaa/0.9/ditaa0_9.zip"))
       (setq org-ditaa-jar-path (expand-file-name jar-name (file-name-directory user-init-file)))
       (unless (file-exists-p org-ditaa-jar-path)
         (sanityinc/grab-ditaa url jar-name)))))
 
-;; (defun sanityinc/grab-plantuml (url jar-name)
-;;   "Download URL and extract JAR-NAME as `org-plantuml-jar-path'."
-;;   ;; TODO: handle errors
-;;   (message "Grabbing " jar-name " for org.")
-;;   (let ((zip-temp (make-temp-name "emacs-plantuml")))
-;;     (unwind-protect
-;;         (progn
-;;           (when (executable-find "unzip")
-;;             (url-copy-file url zip-temp)
-;;             (shell-command (concat "unzip -p " (shell-quote-argument zip-temp)
-;;                                    " " (shell-quote-argument jar-name) " > "
-;;                                    (shell-quote-argument org-plantuml-jar-path)))))
-;;       (when (file-exists-p zip-temp)
-;;         (delete-file zip-temp)))))
+(after-load 'ob-plantuml
+  (let ((jar-name "plantuml.jar")
+        (url "https://jaist.dl.sourceforge.net/project/plantuml/plantuml.jar"))
+    (setq org-plantuml-jar-path (expand-file-name jar-name (file-name-directory user-init-file)))
+    (unless (file-exists-p org-plantuml-jar-path)
+      (url-copy-file url org-plantuml-jar-path))))
 
-;; (after-load 'ob-ditaa
-;;   (unless (file-exists-p org-plantuml-jar-path)
-;;     (let ((jar-name "plantuml.jar")
-;;           (url "http://sourceforge.net/projects/plantuml/files/plantuml-jar-gplv2-8046.zip"))
-;;       (setq org-plantuml-jar-path (expand-file-name jar-name (file-name-directory user-init-file)))
-;;       (unless (file-exists-p org-plantuml-jar-path)
-;;         (sanityinc/grab-plantuml url jar-name)))))
+
 
 
+
+(maybe-require-package 'writeroom-mode)
 
 (define-minor-mode prose-mode
   "Set up a buffer for prose editing.
@@ -85,6 +67,8 @@ typical word processor."
   nil " Prose" nil
   (if prose-mode
       (progn
+        (when (fboundp 'writeroom-mode)
+          (writeroom-mode 1))
         (setq truncate-lines nil)
         (setq word-wrap t)
         (setq cursor-type 'bar)
@@ -94,9 +78,8 @@ typical word processor."
         ;;(delete-selection-mode 1)
         (set (make-local-variable 'blink-cursor-interval) 0.6)
         (set (make-local-variable 'show-trailing-whitespace) nil)
-        (flyspell-mode 1)
-        (when (fboundp 'visual-line-mode)
-          (visual-line-mode 1)))
+        (ignore-errors (flyspell-mode 1))
+        (visual-line-mode 1))
     (kill-local-variable 'truncate-lines)
     (kill-local-variable 'word-wrap)
     (kill-local-variable 'cursor-type)
@@ -104,8 +87,9 @@ typical word processor."
     (buffer-face-mode -1)
     ;; (delete-selection-mode -1)
     (flyspell-mode -1)
-    (when (fboundp 'visual-line-mode)
-      (visual-line-mode -1))))
+    (visual-line-mode -1)
+    (when (fboundp 'writeroom-mode)
+      (writeroom-mode 0))))
 
 ;;(add-hook 'org-mode-hook 'buffer-face-mode)
 
@@ -114,58 +98,30 @@ typical word processor."
 
 ;;; Capturing
 
-;; I use C-c c to start capture mode
 (global-set-key (kbd "C-c c") 'org-capture)
-(setq org-directory "~/org")
-(setq org-default-notes-file "~/org/refile.org")
 
-;; Capture templates for: TODO tasks, Notes
 (setq org-capture-templates
-      `(("t" "Todo" entry (file "~/org/refile.org")  ; "" => org-default-notes-file
-         "* TODO %?\n%U\n%a\n" :clock-in t :clock-resume t)
-        ("n" "Note" entry (file "~/org/refile.org")
-         "* %? :NOTE:\n%U\n%a\n" :clock-in t :clock-resume t)
-        ("j" "Journal" entry (file+datetree "~/org/diary.org")
-         "* %?\n%U\n" :clock-in t :clock-resume t)
-        ("w" "Org-protocol" entry (file "~/org/refile.org")
-         "* TODO Review %c\n%U\n" :immediate-finish t)
-        ("m" "Meeting" entry (file "~/org/refile.org")
-         "* MEETING with %? :MEETING:\n%U" :clock-in t :clock-resume t)
-        ("p" "Phone call" entry (file "~/org/refile.org")
-         "* PHONE %? :PHONE:\n%U" :clock-in t :clock-resume t)
-        ("h" "Habit" entry (file "~/org/refile.org")
-         "* NEXT %?\n%U\n%a\nSCHEDULED: %(format-time-string \"%<<%Y-%m-%d %a .+1d/3d>>\")\n:PROPERTIES:\n:STYLE: habit\n:REPEAT_TO_STATE: NEXT\n:END:\n")
+      `(("t" "todo" entry (file "")  ; "" => `org-default-notes-file'
+         "* NEXT %?\n%U\n" :clock-resume t)
+        ("n" "note" entry (file "")
+         "* %? :NOTE:\n%U\n%a\n" :clock-resume t)
         ))
 
-;;; Set default notes file
-(setq org-default-notes-file "~/org/notes.org")
+
 
 ;;; Refiling
 
 (setq org-refile-use-cache nil)
-;; Targets include this file and any file contributing to the agenda - up to 9 levels deep
-(setq org-refile-targets '((nil :maxlevel . 9) (org-agenda-files :maxlevel . 9)))
 
-;; Targets start with the file name - allows creating level 1 tasks
-;;(setq org-refile-use-outline-path (quote file))
-(setq org-refile-use-outline-path t)
+;; Targets include this file and any file contributing to the agenda - up to 5 levels deep
+(setq org-refile-targets '((nil :maxlevel . 5) (org-agenda-files :maxlevel . 5)))
 
-;; Targets complete directly with IDO
-(setq org-outline-path-complete-in-steps nil)
+(after-load 'org-agenda
+  (add-to-list 'org-agenda-after-show-hook 'org-show-entry))
 
-;; Allow refile to create parent tasks with confirmation
-(setq org-refile-allow-creating-parent-nodes 'confirm)
-
-;; Use IDO for both buffer and file completion and ido-everywhere
-(setq org-completion-use-ido t)
-(setq ido-everywhere t)
-(setq ido-max-directory-size 100000)
-(setq ido-mode (quote both))
-;; Use the current window when visiting files and buffers with ido
-(setq ido-default-file-method 'selected-window)
-(setq ido-default-buffer-method 'selected-window)
-;; Use the current window for indirect buffer display
-(setq org-indirect-buffer-display 'current-window)
+(defadvice org-refile (after sanityinc/save-all-after-refile activate)
+  "Save all org buffers after each refile operation."
+  (org-save-all-org-buffers))
 
 ;; Exclude DONE state tasks from refile targets
 (defun sanityinc/verify-refile-target ()
@@ -174,178 +130,130 @@ typical word processor."
 (setq org-refile-target-verify-function 'sanityinc/verify-refile-target)
 
 (defun sanityinc/org-refile-anywhere (&optional goto default-buffer rfloc msg)
-  "A version of `org-refile' which suppresses `org-refile-target-verify-function'."
+  "A version of `org-refile' which allows refiling to any subtree."
   (interactive "P")
   (let ((org-refile-target-verify-function))
     (org-refile goto default-buffer rfloc msg)))
 
+(defun sanityinc/org-agenda-refile-anywhere (&optional goto rfloc no-update)
+  "A version of `org-agenda-refile' which allows refiling to any subtree."
+  (interactive "P")
+  (let ((org-refile-target-verify-function))
+    (org-agenda-refile goto rfloc no-update)))
+
+;; Targets start with the file name - allows creating level 1 tasks
+;;(setq org-refile-use-outline-path (quote file))
+(setq org-refile-use-outline-path t)
+(setq org-outline-path-complete-in-steps nil)
+
+;; Allow refile to create parent tasks with confirmation
+(setq org-refile-allow-creating-parent-nodes 'confirm)
 
 
 ;;; To-do settings
 
 (setq org-todo-keywords
-      (quote ((sequence "TODO(t)" "NEXT(n)" "|" "DONE(d)")
-              (sequence "WAITING(w@/!)" "HOLD(h@/!)" "|" "CANCELLED(c@/!)" "PHONE" "MEETING"))))
+      (quote ((sequence "TODO(t)" "NEXT(n)" "|" "DONE(d!/!)")
+              (sequence "PROJECT(p)" "|" "DONE(d!/!)" "CANCELLED(c@/!)")
+              (sequence "WAITING(w@/!)" "DELEGATED(e!)" "HOLD(h)" "|" "CANCELLED(c@/!)")))
+      org-todo-repeat-to-state "NEXT")
 
 (setq org-todo-keyword-faces
-      (quote (("TODO" :foreground "red" :weight bold)
-              ("NEXT" :foreground "blue" :weight bold)
-              ("DONE" :foreground "forest green" :weight bold)
-              ("WAITING" :foreground "orange" :weight bold)
-              ("HOLD" :foreground "magenta" :weight bold)
-              ("CANCELLED" :foreground "forest green" :weight bold)
-              ("MEETING" :foreground "forest green" :weight bold)
-              ("PHONE" :foreground "forest green" :weight bold))))
+      (quote (("NEXT" :inherit warning)
+              ("PROJECT" :inherit font-lock-string-face))))
 
-;;; Fast Todo Selection
-(setq org-use-fast-todo-selection t)
-(setq org-treat-S-cursor-todo-selection-as-state-change nil)
-
-;;; TODO state triggers
-(setq org-todo-state-tags-triggers
-      (quote (("CANCELLED" ("CANCELLED" . t))
-              ("WAITING" ("WAITING" . t))
-              ("HOLD" ("WAITING") ("HOLD" . t))
-              (done ("WAITING") ("HOLD"))
-              ("TODO" ("WAITING") ("CANCELLED") ("HOLD"))
-              ("NEXT" ("WAITING") ("CANCELLED") ("HOLD"))
-              ("DONE" ("WAITING") ("CANCELLED") ("HOLD")))))
 
 
 ;;; Agenda views
 
-(if (boundp 'org-user-agenda-files)
-    (setq org-agenda-files org-user-agenda-files)
-  (setq org-agenda-files (quote ("~/org"
-                                 "~/org/me"
-                                 "~/org/work"))))
-(after-load 'org-agenda
-  (add-to-list 'org-agenda-after-show-hook 'org-show-entry))
-
 (setq-default org-agenda-clockreport-parameter-plist '(:link t :maxlevel 3))
 
-;; Do not dim blocked tasks
-(setq org-agenda-dim-blocked-tasks nil)
 
-;; Compact the block agenda view
-(setq org-agenda-compact-blocks t)
+(let ((active-project-match "-INBOX/PROJECT"))
 
-;; Custom agenda command definitions
-(setq org-agenda-custom-commands
-      (quote (("N" "Notes" tags "NOTE"
-               ((org-agenda-overriding-header "Notes")
-                (org-tags-match-list-sublevels t)))
-              ("h" "Habits" tags-todo "STYLE=\"habit\""
-               ((org-agenda-overriding-header "Habits")
-                (org-agenda-sorting-strategy
-                 '(todo-state-down effort-up category-keep))))
-              (" " "Agenda"
-               ((agenda "" nil)
-                (tags "REFILE"
-                      ((org-agenda-overriding-header "Tasks to Refile")
-                       (org-tags-match-list-sublevels nil)))
-                (tags-todo "-CANCELLED/!"
-                           ((org-agenda-overriding-header "Stuck Projects")
-                            (org-agenda-skip-function 'bh/skip-non-stuck-projects)
-                            (org-agenda-sorting-strategy
-                             '(category-keep))))
-                (tags-todo "-HOLD-CANCELLED/!"
-                           ((org-agenda-overriding-header "Projects")
-                            (org-agenda-skip-function 'bh/skip-non-projects)
-                            (org-tags-match-list-sublevels 'indented)
-                            (org-agenda-sorting-strategy
-                             '(category-keep))))
-                (tags-todo "-CANCELLED/!NEXT"
-                           ((org-agenda-overriding-header (concat "Project Next Tasks"
-                                                                  (if bh/hide-scheduled-and-waiting-next-tasks
-                                                                      ""
-                                                                    " (including WAITING and SCHEDULED tasks)")))
-                            (org-agenda-skip-function 'bh/skip-projects-and-habits-and-single-tasks)
-                            (org-tags-match-list-sublevels t)
-                            (org-agenda-todo-ignore-scheduled bh/hide-scheduled-and-waiting-next-tasks)
-                            (org-agenda-todo-ignore-deadlines bh/hide-scheduled-and-waiting-next-tasks)
-                            (org-agenda-todo-ignore-with-date bh/hide-scheduled-and-waiting-next-tasks)
-                            (org-agenda-sorting-strategy
-                             '(todo-state-down effort-up category-keep))))
-                (tags-todo "-REFILE-CANCELLED-WAITING-HOLD/!"
-                           ((org-agenda-overriding-header (concat "Project Subtasks"
-                                                                  (if bh/hide-scheduled-and-waiting-next-tasks
-                                                                      ""
-                                                                    " (including WAITING and SCHEDULED tasks)")))
-                            (org-agenda-skip-function 'bh/skip-non-project-tasks)
-                            (org-agenda-todo-ignore-scheduled bh/hide-scheduled-and-waiting-next-tasks)
-                            (org-agenda-todo-ignore-deadlines bh/hide-scheduled-and-waiting-next-tasks)
-                            (org-agenda-todo-ignore-with-date bh/hide-scheduled-and-waiting-next-tasks)
-                            (org-agenda-sorting-strategy
-                             '(category-keep))))
-                (tags-todo "-REFILE-CANCELLED-WAITING-HOLD/!"
-                           ((org-agenda-overriding-header (concat "Standalone Tasks"
-                                                                  (if bh/hide-scheduled-and-waiting-next-tasks
-                                                                      ""
-                                                                    " (including WAITING and SCHEDULED tasks)")))
-                            (org-agenda-skip-function 'bh/skip-project-tasks)
-                            (org-agenda-todo-ignore-scheduled bh/hide-scheduled-and-waiting-next-tasks)
-                            (org-agenda-todo-ignore-deadlines bh/hide-scheduled-and-waiting-next-tasks)
-                            (org-agenda-todo-ignore-with-date bh/hide-scheduled-and-waiting-next-tasks)
-                            (org-agenda-sorting-strategy
-                             '(category-keep))))
-                (tags-todo "-CANCELLED+WAITING|HOLD/!"
-                           ((org-agenda-overriding-header (concat "Waiting and Postponed Tasks"
-                                                                  (if bh/hide-scheduled-and-waiting-next-tasks
-                                                                      ""
-                                                                    " (including WAITING and SCHEDULED tasks)")))
-                            (org-agenda-skip-function 'bh/skip-non-tasks)
-                            (org-tags-match-list-sublevels nil)
-                            (org-agenda-todo-ignore-scheduled bh/hide-scheduled-and-waiting-next-tasks)
-                            (org-agenda-todo-ignore-deadlines bh/hide-scheduled-and-waiting-next-tasks)))
-                (tags "-REFILE/"
-                      ((org-agenda-overriding-header "Tasks to Archive")
-                       (org-agenda-skip-function 'bh/skip-non-archivable-tasks)
-                       (org-tags-match-list-sublevels nil))))
-               nil))))
+  (setq org-stuck-projects
+        `(,active-project-match ("NEXT")))
+
+  (setq org-agenda-compact-blocks t
+        org-agenda-sticky t
+        org-agenda-start-on-weekday nil
+        org-agenda-span 'day
+        org-agenda-include-diary nil
+        org-agenda-sorting-strategy
+        '((agenda habit-down time-up user-defined-up effort-up category-keep)
+          (todo category-up effort-up)
+          (tags category-up effort-up)
+          (search category-up))
+        org-agenda-window-setup 'current-window
+        org-agenda-custom-commands
+        `(("N" "Notes" tags "NOTE"
+           ((org-agenda-overriding-header "Notes")
+            (org-tags-match-list-sublevels t)))
+          ("g" "GTD"
+           ((agenda "" nil)
+            (tags "INBOX"
+                  ((org-agenda-overriding-header "Inbox")
+                   (org-tags-match-list-sublevels nil)))
+            (stuck ""
+                   ((org-agenda-overriding-header "Stuck Projects")
+                    (org-agenda-tags-todo-honor-ignore-options t)
+                    (org-tags-match-list-sublevels t)
+                    (org-agenda-todo-ignore-scheduled 'future)))
+            (tags-todo "-INBOX"
+                       ((org-agenda-overriding-header "Next Actions")
+                        (org-agenda-tags-todo-honor-ignore-options t)
+                        (org-agenda-todo-ignore-scheduled 'future)
+                        (org-agenda-skip-function
+                         '(lambda ()
+                            (or (org-agenda-skip-subtree-if 'todo '("HOLD" "WAITING"))
+                                (org-agenda-skip-entry-if 'nottodo '("NEXT")))))
+                        (org-tags-match-list-sublevels t)
+                        (org-agenda-sorting-strategy
+                         '(todo-state-down effort-up category-keep))))
+            (tags-todo ,active-project-match
+                       ((org-agenda-overriding-header "Projects")
+                        (org-tags-match-list-sublevels t)
+                        (org-agenda-sorting-strategy
+                         '(category-keep))))
+            (tags-todo "-INBOX/-NEXT"
+                       ((org-agenda-overriding-header "Orphaned Tasks")
+                        (org-agenda-tags-todo-honor-ignore-options t)
+                        (org-agenda-todo-ignore-scheduled 'future)
+                        (org-agenda-skip-function
+                         '(lambda ()
+                            (or (org-agenda-skip-subtree-if 'todo '("PROJECT" "HOLD" "WAITING" "DELEGATED"))
+                                (org-agenda-skip-subtree-if 'nottododo '("TODO")))))
+                        (org-tags-match-list-sublevels t)
+                        (org-agenda-sorting-strategy
+                         '(category-keep))))
+            (tags-todo "/WAITING"
+                       ((org-agenda-overriding-header "Waiting")
+                        (org-agenda-tags-todo-honor-ignore-options t)
+                        (org-agenda-todo-ignore-scheduled 'future)
+                        (org-agenda-sorting-strategy
+                         '(category-keep))))
+            (tags-todo "/DELEGATED"
+                       ((org-agenda-overriding-header "Delegated")
+                        (org-agenda-tags-todo-honor-ignore-options t)
+                        (org-agenda-todo-ignore-scheduled 'future)
+                        (org-agenda-sorting-strategy
+                         '(category-keep))))
+            (tags-todo "-INBOX"
+                       ((org-agenda-overriding-header "On Hold")
+                        (org-agenda-skip-function
+                         '(lambda ()
+                            (or (org-agenda-skip-subtree-if 'todo '("WAITING"))
+                                (org-agenda-skip-entry-if 'nottodo '("HOLD")))))
+                        (org-tags-match-list-sublevels nil)
+                        (org-agenda-sorting-strategy
+                         '(category-keep))))
+            ;; (tags-todo "-NEXT"
+            ;;            ((org-agenda-overriding-header "All other TODOs")
+            ;;             (org-match-list-sublevels t)))
+            )))))
 
 
 (add-hook 'org-agenda-mode-hook 'hl-line-mode)
-
-
-;;; Automatically removing context base tasks with / RET
-(defun linden/org-auto-exclude-function (tag)
-  "Automatic task exclusion in the agenda with / RET"
-  (and (cond
-        ((string= tag "hold")
-         t)
-        ((string= tag "diy")
-         t))
-       (concat "-" tag)))
-
-(setq org-agenda-auto-exclude-function 'linden/org-auto-exclude-function)
-
-
-;;; Tags
-(setq org-tag-alist (quote ((:startgroup)
-                            ("@errand" . ?e)
-                            ("@office" . ?o)
-                            ("@home" . ?H)
-                            ("@diy" . ?d)
-                            (:endgroup)
-                            ("WAITING" . ?w)
-                            ("HOLD" . ?h)
-                            ("PERSONAL" . ?P)
-                            ("WORK" . ?W)
-                            ("DIY" . ?D)
-                            ("ORG" . ?O)
-                            ("LINDEN" . ?L)
-                            ("crypt" . ?E)
-                            ("NOTE" . ?n)
-                            ("CANCELLED" . ?c)
-                            ("FLAGGED" . ??))))
-
-;; Allow setting single tags without the menu
-(setq org-fast-tag-selection-single-key (quote expert))
-
-;; For tag searches ignore tasks with scheduled and deadline dates
-(setq org-agenda-tags-todo-honor-ignore-options t)
-
 
 
 ;;; Org clock
@@ -370,15 +278,15 @@ typical word processor."
 
 
 ;;; Show the clocked-in task - if any - in the header line
-(defun linden/show-org-clock-in-header-line ()
+(defun sanityinc/show-org-clock-in-header-line ()
   (setq-default header-line-format '((" " org-mode-line-string " "))))
 
-(defun linden/hide-org-clock-from-header-line ()
+(defun sanityinc/hide-org-clock-from-header-line ()
   (setq-default header-line-format nil))
 
-(add-hook 'org-clock-in-hook 'linden/show-org-clock-in-header-line)
-(add-hook 'org-clock-out-hook 'linden/hide-org-clock-from-header-line)
-(add-hook 'org-clock-cancel-hook 'linden/hide-org-clock-from-header-line)
+(add-hook 'org-clock-in-hook 'sanityinc/show-org-clock-in-header-line)
+(add-hook 'org-clock-out-hook 'sanityinc/hide-org-clock-from-header-line)
+(add-hook 'org-clock-cancel-hook 'sanityinc/hide-org-clock-from-header-line)
 
 (after-load 'org-clock
   (define-key org-clock-mode-line-map [header-line mouse-2] 'org-clock-goto)
@@ -389,22 +297,22 @@ typical word processor."
 (when (and *is-a-mac* (file-directory-p "/Applications/org-clock-statusbar.app"))
   (add-hook 'org-clock-in-hook
             (lambda () (call-process "/usr/bin/osascript" nil 0 nil "-e"
-                                (concat "tell application \"org-clock-statusbar\" to clock in \"" org-clock-current-task "\""))))
+                                     (concat "tell application \"org-clock-statusbar\" to clock in \"" org-clock-current-task "\""))))
   (add-hook 'org-clock-out-hook
             (lambda () (call-process "/usr/bin/osascript" nil 0 nil "-e"
-                                "tell application \"org-clock-statusbar\" to clock out"))))
+                                     "tell application \"org-clock-statusbar\" to clock out"))))
 
 
 
 ;; Remove empty LOGBOOK drawers on clock out
-(defun linden/remove-empty-drawer-on-clock-out ()
+(defun sanityinc/remove-empty-drawer-on-clock-out ()
   (interactive)
   (save-excursion
     (beginning-of-line 0)
     (org-remove-empty-drawer-at "LOGBOOK" (point))))
 
 (after-load 'org-clock
-  (add-hook 'org-clock-out-hook 'linden/remove-empty-drawer-on-clock-out 'append))
+  (add-hook 'org-clock-out-hook 'sanityinc/remove-empty-drawer-on-clock-out 'append))
 
 
 
@@ -448,33 +356,8 @@ typical word processor."
 ;;                   (re-search-backward "^[0-9]+:[0-9]+-[0-9]+:[0-9]+ " nil t))
 ;;                 (insert (match-string 0))))))
 
-
-;;; Crypt
-
-;; File
-(require 'epa-file)
-(epa-file-enable)
-(setq epa-file-select-keys nil)
-
-;; Entity
-(require 'org-crypt)
-
-;;Auto encrypt when save
-(org-crypt-use-before-save-magic)
-
-;; Set encrypt tag
-(setq org-crypt-tag-matcher "crypt")
-
-;; Prevent secret tag inherit
-(setq org-tags-exclude-from-inheritance (quote ("crypt")))
-
-;; Set encrypt key
-(setq org-crypt-key nil)
 
 
-
-
-;;; Remain
 (after-load 'org
   (define-key org-mode-map (kbd "C-M-<up>") 'org-up-element)
   (when *is-a-mac*
@@ -501,6 +384,5 @@ typical word processor."
      (,(if (locate-library "ob-sh") 'sh 'shell) . t)
      (sql . nil)
      (sqlite . t))))
-
 
 (provide 'init-org)
